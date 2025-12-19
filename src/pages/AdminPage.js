@@ -30,7 +30,6 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (endpoint === "tootajad") {
-        // Фильтруем только работников, убираем админов
         setter(data.filter(u => u.role === "Worker"));
       } else {
         setter(data);
@@ -73,7 +72,6 @@ export default function AdminPage() {
     }
   };
 
-  // 🎨 Стиль
   const container = {
     padding: "30px",
     fontFamily: "Inter, sans-serif",
@@ -243,7 +241,7 @@ export default function AdminPage() {
                 <td style={thTd}>{b.tootaja_nimi}</td>
                 <td style={thTd}>{b.teenuse_nimetus}</td>
                 <td style={thTd}>{new Date(b.startTime).toLocaleString()}</td>
-                <td style={thTd}>{b.staatus ? "Jah" : "Ei"}</td> {/* Корректное отображение */}
+                <td style={thTd}>{b.staatus ? "Jah" : "Ei"}</td> 
                 <td style={thTd}>
                   <button style={deleteBtn} onClick={() => handleDeleteBooking(b.id)}>Kustuta</button>
                 </td>

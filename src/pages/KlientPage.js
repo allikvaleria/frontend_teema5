@@ -5,8 +5,8 @@ import LogoutButton from "../components/Logout";
 export default function ClientPage() {
   const { token } = useContext(AuthContext);
 
-  const [services, setServices] = useState([]);
   const [workers, setWorkers] = useState([]);
+  const [services, setServices] = useState([]);
   const [booking, setBooking] = useState({
     Klient_nimi: "",
     Telefoninumber: "",
@@ -16,27 +16,40 @@ export default function ClientPage() {
     Staatus: false
   });
 
-  // Загрузка данных
   useEffect(() => {
-    fetchData("services", setServices);
-    fetchData("tootajad", setWorkers);
+    fetchWorkers();
+    fetchServices();
   }, [token]);
 
-  const fetchData = async (endpoint, setter) => {
+  const fetchWorkers = async () => {
     try {
-      const res = await fetch(`https://localhost:7284/api/klient/${endpoint}`, {
+      const res = await fetch("https://localhost:7284/api/klient/tootajad", {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      // Фильтруем только работников (без админов)
-      if (endpoint === "tootajad") setter(data.filter(w => w.role === "Worker"));
-      else setter(data);
+      const formatted = data.map(w => ({
+        ...w,
+        services: w.tootajaServices?.map(ts => ts.service?.teenuse_nimetus) || []
+      }));
+
+      setWorkers(formatted);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Создание бронирования
+  const fetchServices = async () => {
+    try {
+      const res = await fetch("https://localhost:7284/api/klient/services", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setServices(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -45,11 +58,13 @@ export default function ClientPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(booking)
       });
+
       if (!res.ok) {
         const errMsg = await res.text();
-        return alert("Bронирование не удалось: " + errMsg);
+        return alert("Broneering ei õnnestunud: " + errMsg);
       }
-      alert("Бронирование успешно создано!");
+
+      alert("Broneering on edukalt loodud!");
       setBooking({ Klient_nimi: "", Telefoninumber: "", TootajaId: "", ServiceId: "", StartTime: "", Staatus: false });
     } catch (err) {
       console.error(err);
@@ -70,32 +85,6 @@ export default function ClientPage() {
     <div style={container}>
       <LogoutButton />
 
-      {/* Список работников */}
-      <div style={section}>
-        <h2 style={heading}>Töötajad</h2>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Foto</th>
-              <th style={thStyle}>Nimi</th>
-              <th style={thStyle}>Email</th>
-              <th style={thStyle}>Telefon</th>
-            </tr>
-          </thead>
-          <tbody>
-            {workers.map(w => (
-              <tr key={w.id}>
-                <td>{w.profileImageUrl ? <img src={w.profileImageUrl} alt={w.nimi} style={imgStyle} /> : "—"}</td>
-                <td style={thTd}>{w.nimi}</td>
-                <td style={thTd}>{w.email}</td>
-                <td style={thTd}>{w.telefoninumber}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Список услуг */}
       <div style={section}>
         <h2 style={heading}>Teenused</h2>
         <table style={tableStyle}>
@@ -121,14 +110,40 @@ export default function ClientPage() {
           </tbody>
         </table>
       </div>
+      
+      <div style={section}>
+        <h2 style={heading}>Töötajad</h2>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Foto</th>
+              <th style={thStyle}>Nimi</th>
+              <th style={thStyle}>Email</th>
+              <th style={thStyle}>Telefon</th>
+              <th style={thStyle}>Teenused</th>
+            </tr>
+          </thead>
+          <tbody>
+            {workers.map(w => (
+              <tr key={w.id}>
+                <td>{w.profileImageUrl ? <img src={w.profileImageUrl} alt={w.nimi} style={imgStyle} /> : "—"}</td>
+                <td style={thTd}>{w.nimi}</td>
+                <td style={thTd}>{w.email}</td>
+                <td style={thTd}>{w.telefoninumber}</td>
+                <td style={thTd}>{w.services.length ? w.services.join(", ") : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Создание бронирования */}
+      
       <div style={section}>
         <h2 style={heading}>Loo broneering</h2>
         <form onSubmit={handleBookingSubmit}>
           <input placeholder="Sinu nimi" value={booking.Klient_nimi} onChange={e => setBooking({ ...booking, Klient_nimi: e.target.value })} style={input} />
           <input placeholder="Telefoninumber" value={booking.Telefoninumber} onChange={e => setBooking({ ...booking, Telefoninumber: e.target.value })} style={input} />
-          
+
           <select value={booking.TootajaId} onChange={e => setBooking({ ...booking, TootajaId: e.target.value })} style={input}>
             <option value="">Vali töötaja</option>
             {workers.map(w => <option key={w.id} value={w.id}>{w.nimi}</option>)}
@@ -136,6 +151,7 @@ export default function ClientPage() {
 
           <select value={booking.ServiceId} onChange={e => setBooking({ ...booking, ServiceId: e.target.value })} style={input}>
             <option value="">Vali teenus</option>
+            {/* Здесь выводим все услуги, можно потом фильтровать по выбранному работнику */}
             {services.map(s => <option key={s.id} value={s.id}>{s.teenuse_nimetus}</option>)}
           </select>
 

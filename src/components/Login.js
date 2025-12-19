@@ -24,10 +24,8 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      // data: { token, role, name }
       login(data.token, data.role, data.name);
 
-      // Перенаправление после логина
       if (data.role.toLowerCase() === "admin") navigate("/admin");
       else navigate("/klient");
     } catch (err) {
